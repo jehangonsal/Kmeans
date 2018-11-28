@@ -1,0 +1,43 @@
+
+### Let's do the kmeans plot
+
+### This code was put together in a rush. Would you like to improve it? Please do!
+
+library(tidyverse)
+
+df <- datasets::airquality %>% select(Ozone, Solar.R) 
+
+df <- df[complete.cases(df),]
+
+output <- df
+
+dfCluster <- kmeans(df,centers=3, iter.max = 10) ### Good. Let's make the next bit ggplot-like
+
+output$cluster <- dfCluster$cluster %>% as.factor()
+
+output <- output %>% arrange(cluster, Ozone) %>% mutate(row = (row_number()*2 - 1))
+
+centroids <- dfCluster$centers %>% as.data.frame()
+
+centroids$cluster <- c(1,2,3) %>% as.factor
+
+names(centroids) <- c("Ozone", "Solar.R", "cluster")
+
+long_centroids <- centroids %>% left_join(output %>% select(cluster), by = "cluster", drop = TRUE)
+
+long_centroids <- long_centroids %>% arrange(cluster, Ozone)  %>% mutate(row = row_number()*2)
+
+final <- rbind(long_centroids, output) %>% 
+  arrange(cluster,row) 
+
+final %>% 
+  ggplot( aes(x = Ozone, y = Solar.R, group = cluster)) + geom_path() + 
+  geom_point(data = output, aes(x = Ozone, y = Solar.R, colour = cluster), size = 2) +
+  geom_point(data = centroids, aes(x = Ozone, y = Solar.R, colour = c(1,2,3) %>% as.factor()), size = 50, alpha = .4) +
+  geom_point(data = centroids, aes(x = Ozone, y = Solar.R), size = 6) + guides(colour=FALSE) +
+  labs(x = "Ozone", y = "Solar Radiation", title = 
+"K-means clusters and their centroids",
+       caption = 
+"The green cluster has many outliers 
+pulling it the the right")
+  
